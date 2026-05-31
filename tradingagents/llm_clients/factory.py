@@ -42,6 +42,10 @@ def create_llm_client(
         from .external_auth_client import ExternalAuthClient
         return ExternalAuthClient(model, base_url, **kwargs)
 
+    if provider_lower == "codex-oauth":
+        from .codex_oauth_client import CodexOAuthClient
+        return CodexOAuthClient(model, base_url, **kwargs)
+
     if provider_lower in _OPENAI_COMPATIBLE:
         from .openai_client import OpenAIClient
         return OpenAIClient(model, base_url, provider=provider_lower, **kwargs)

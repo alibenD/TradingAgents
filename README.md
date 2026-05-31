@@ -169,6 +169,28 @@ export TRADINGAGENTS_LLM_AUTH_COMMAND=/path/to/fetch-token
 The auth command must print only the bearer token to stdout. TradingAgents does
 not read browser, Codex, or Hermes credential stores for this provider.
 
+For local report generation using a ChatGPT/Codex subscription login, use the
+TradingAgents-owned Codex OAuth provider:
+
+```bash
+python -m tradingagents.llm_clients.codex_login login
+export TRADINGAGENTS_LLM_PROVIDER=codex-oauth
+export TRADINGAGENTS_DEEP_THINK_LLM=gpt-5.4
+export TRADINGAGENTS_QUICK_THINK_LLM=gpt-5.4-mini
+python -m cli.main analyze
+```
+
+This provider creates its own TradingAgents OAuth session under
+`~/.tradingagents/auth/codex_oauth.json` and calls the Codex Responses backend.
+It does not depend on Hermes at runtime, does not call the Hermes CLI, and does
+not read `~/.hermes/auth.json`.
+
+For a one-command launcher after login:
+
+```bash
+./scripts/start_tradingagents_codex.sh
+```
+
 Alternatively, copy `.env.example` to `.env` and fill in your keys:
 ```bash
 cp .env.example .env

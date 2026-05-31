@@ -33,6 +33,9 @@ PROVIDER_API_KEY_ENV: dict[str, Optional[str]] = {
     # User-controlled gateways can fetch short-lived bearer tokens via
     # TRADINGAGENTS_LLM_AUTH_COMMAND instead of storing static API keys.
     "external-auth": None,
+    # TradingAgents-owned ChatGPT/Codex OAuth session; tokens live under
+    # ~/.tradingagents/auth and are managed by codex_login.
+    "codex-oauth": None,
     # Local runtimes do not authenticate.
     "ollama":     None,
 }

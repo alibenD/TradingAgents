@@ -164,6 +164,19 @@ MODEL_OPTIONS: ProviderModeOptions = {
             ("Custom model ID", "custom"),
         ],
     },
+    "codex-oauth": {
+        "quick": [
+            ("GPT-5.4 Mini - Fast Codex model via ChatGPT subscription", "gpt-5.4-mini"),
+            ("GPT-5.3 Codex Spark - Fast Codex preview", "gpt-5.3-codex-spark"),
+            ("Custom model ID", "custom"),
+        ],
+        "deep": [
+            ("GPT-5.5 - Frontier Codex model via ChatGPT subscription", "gpt-5.5"),
+            ("GPT-5.4 - Strong Codex model via ChatGPT subscription", "gpt-5.4"),
+            ("GPT-5.3 Codex - Codex-specialized model", "gpt-5.3-codex"),
+            ("Custom model ID", "custom"),
+        ],
+    },
     # OpenRouter: fetched dynamically. Azure: any deployed model name.
     # Ollama display labels intentionally omit a "local" marker — the
     # endpoint is now configurable via OLLAMA_BASE_URL, so the same labels
