@@ -157,6 +157,18 @@ For enterprise providers (e.g. Azure OpenAI, AWS Bedrock), copy `.env.enterprise
 
 For local models, configure Ollama with `llm_provider: "ollama"`. The default endpoint is `http://localhost:11434/v1`; set `OLLAMA_BASE_URL` to point at a remote `ollama-serve`. Pull models with `ollama pull <name>`, and pick "Custom model ID" in the CLI for any model not listed by default.
 
+For user-controlled OpenAI-compatible gateways that require short-lived bearer
+tokens, use the external-auth provider:
+
+```bash
+export TRADINGAGENTS_LLM_PROVIDER=external-auth
+export TRADINGAGENTS_LLM_BACKEND_URL=https://your-gateway.example/v1
+export TRADINGAGENTS_LLM_AUTH_COMMAND=/path/to/fetch-token
+```
+
+The auth command must print only the bearer token to stdout. TradingAgents does
+not read browser, Codex, or Hermes credential stores for this provider.
+
 Alternatively, copy `.env.example` to `.env` and fill in your keys:
 ```bash
 cp .env.example .env
@@ -189,7 +201,7 @@ An interface will appear showing results as they load, letting you track the age
 
 ### Implementation Details
 
-We built TradingAgents with LangGraph to ensure flexibility and modularity. The framework supports multiple LLM providers: OpenAI, Google, Anthropic, xAI, DeepSeek, Qwen (Alibaba DashScope, international and China endpoints), GLM (Zhipu), MiniMax (global + China), OpenRouter, Ollama for local models, and Azure OpenAI for enterprise.
+We built TradingAgents with LangGraph to ensure flexibility and modularity. The framework supports multiple LLM providers: OpenAI, Google, Anthropic, xAI, DeepSeek, Qwen (Alibaba DashScope, international and China endpoints), GLM (Zhipu), MiniMax (global + China), OpenRouter, Ollama for local models, Azure OpenAI for enterprise, and external-auth for user-controlled OpenAI-compatible gateways with command-backed bearer tokens.
 
 ### Python Usage
 

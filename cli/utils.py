@@ -276,6 +276,7 @@ def select_llm_provider() -> tuple[str, str | None]:
         ("GLM", "glm", "https://open.bigmodel.cn/api/paas/v4/"),
         ("MiniMax", "minimax", "https://api.minimax.io/v1"),
         ("OpenRouter", "openrouter", "https://openrouter.ai/api/v1"),
+        ("External Auth / OAuth Gateway", "external-auth", os.environ.get("TRADINGAGENTS_LLM_BACKEND_URL")),
         ("Azure OpenAI", "azure", None),
         ("Ollama", "ollama", ollama_url),
     ]

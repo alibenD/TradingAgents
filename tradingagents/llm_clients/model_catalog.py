@@ -153,6 +153,17 @@ MODEL_OPTIONS: ProviderModeOptions = {
     # so the two provider keys share one model list.
     "minimax": _MINIMAX_MODELS,
     "minimax-cn": _MINIMAX_MODELS,
+    # External-auth gateways can point at arbitrary OpenAI-compatible models.
+    "external-auth": {
+        "quick": [
+            ("Gateway default quick model", "gateway-default"),
+            ("Custom model ID", "custom"),
+        ],
+        "deep": [
+            ("Gateway default deep model", "gateway-default"),
+            ("Custom model ID", "custom"),
+        ],
+    },
     # OpenRouter: fetched dynamically. Azure: any deployed model name.
     # Ollama display labels intentionally omit a "local" marker — the
     # endpoint is now configurable via OLLAMA_BASE_URL, so the same labels

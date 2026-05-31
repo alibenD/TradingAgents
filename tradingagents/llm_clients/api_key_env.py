@@ -30,6 +30,9 @@ PROVIDER_API_KEY_ENV: dict[str, Optional[str]] = {
     "minimax":    "MINIMAX_API_KEY",
     "minimax-cn": "MINIMAX_CN_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    # User-controlled gateways can fetch short-lived bearer tokens via
+    # TRADINGAGENTS_LLM_AUTH_COMMAND instead of storing static API keys.
+    "external-auth": None,
     # Local runtimes do not authenticate.
     "ollama":     None,
 }
