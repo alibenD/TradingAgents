@@ -177,7 +177,7 @@ python -m tradingagents.llm_clients.codex_login login
 export TRADINGAGENTS_LLM_PROVIDER=codex-oauth
 export TRADINGAGENTS_DEEP_THINK_LLM=gpt-5.4
 export TRADINGAGENTS_QUICK_THINK_LLM=gpt-5.4-mini
-python -m cli.main analyze
+python -m cli.main
 ```
 
 This provider creates its own TradingAgents OAuth session under

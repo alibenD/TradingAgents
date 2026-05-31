@@ -25,4 +25,4 @@ python -m tradingagents.llm_clients.codex_login status || {
   exit 2
 }
 
-python -m cli.main analyze "$@"
+python -m cli.main "$@"
