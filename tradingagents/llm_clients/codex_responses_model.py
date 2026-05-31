@@ -199,8 +199,56 @@ class _CodexStructuredRunnable(Runnable):
         self.llm = llm
         self.schema = schema
 
+    def _schema_instruction(self) -> str:
+        if hasattr(self.schema, "model_json_schema"):
+            schema_json = json.dumps(self.schema.model_json_schema(), ensure_ascii=False)
+        elif hasattr(self.schema, "schema"):
+            schema_json = json.dumps(self.schema.schema(), ensure_ascii=False)
+        else:
+            schema_json = str(self.schema)
+        return (
+            "Return only one valid JSON object that conforms to this JSON Schema. "
+            "Do not include Markdown fences, prose, commentary, or extra keys.\n"
+            f"{schema_json}"
+        )
+
+    def _with_schema_instruction(self, input: Any) -> Any:
+        instruction = SystemMessage(content=self._schema_instruction())
+        if isinstance(input, str):
+            return [instruction, HumanMessage(content=input)]
+        if isinstance(input, BaseMessage):
+            return [instruction, input]
+        if isinstance(input, list) and all(isinstance(item, BaseMessage) for item in input):
+            return [instruction, *input]
+        return input
+
+    def _tool_schema(self) -> dict[str, Any]:
+        if hasattr(self.schema, "model_json_schema"):
+            parameters = self.schema.model_json_schema()
+        elif hasattr(self.schema, "schema"):
+            parameters = self.schema.schema()
+        else:
+            parameters = {"type": "object", "properties": {}}
+        return {
+            "type": "function",
+            "function": {
+                "name": "structured_output",
+                "description": "Return the requested structured response.",
+                "parameters": parameters,
+            },
+        }
+
     def invoke(self, input: Any, config: Any = None, **kwargs: Any) -> Any:
-        response = self.llm.invoke(input, config=config, **kwargs)
+        structured_llm = self.llm.bind_tools([self._tool_schema()])
+        structured_llm._tool_choice = {"type": "function", "name": "structured_output"}
+        structured_llm._parallel_tool_calls = False
+        response = structured_llm.invoke(self._with_schema_instruction(input), config=config, **kwargs)
+        if response.tool_calls:
+            raw_args = response.tool_calls[0].get("args", {})
+            raw_json = json.dumps(raw_args, ensure_ascii=False)
+            if hasattr(self.schema, "model_validate_json"):
+                return self.schema.model_validate_json(raw_json)
+            return self.schema.parse_raw(raw_json)
         raw_json = _extract_json_object(str(response.content or ""))
         if hasattr(self.schema, "model_validate_json"):
             return self.schema.model_validate_json(raw_json)
@@ -220,6 +268,8 @@ class CodexResponsesChatModel(BaseChatModel):
 
     _client: Any = PrivateAttr(default=None)
     _bound_tools: list[dict[str, Any]] | None = PrivateAttr(default=None)
+    _tool_choice: Any = PrivateAttr(default="auto")
+    _parallel_tool_calls: bool = PrivateAttr(default=True)
 
     def __init__(self, **data: Any):
         client = data.pop("client", None)
@@ -265,8 +315,8 @@ class CodexResponsesChatModel(BaseChatModel):
         tools = _convert_tools(self._bound_tools)
         if tools:
             kwargs["tools"] = tools
-            kwargs["tool_choice"] = "auto"
-            kwargs["parallel_tool_calls"] = True
+            kwargs["tool_choice"] = self._tool_choice
+            kwargs["parallel_tool_calls"] = self._parallel_tool_calls
         return kwargs
 
     def _stream_response(self, request: dict[str, Any]) -> Any:
@@ -369,6 +419,8 @@ class CodexResponsesChatModel(BaseChatModel):
         bound = self.model_copy()
         bound._client = self._client
         bound._bound_tools = list(tools)
+        bound._tool_choice = "auto"
+        bound._parallel_tool_calls = True
         return bound
 
     def with_structured_output(self, schema: Any, **kwargs: Any) -> Runnable:

@@ -192,3 +192,33 @@ def test_with_structured_output_parses_json_response():
     result = structured.invoke("return JSON")
 
     assert result.action == "Buy"
+    assert "Return only one valid JSON object" in client.responses.kwargs["instructions"]
+    assert '"action"' in client.responses.kwargs["instructions"]
+    assert client.responses.kwargs["tools"][0]["name"] == "structured_output"
+    assert client.responses.kwargs["tool_choice"] == {"type": "function", "name": "structured_output"}
+    assert client.responses.kwargs["parallel_tool_calls"] is False
+
+
+def test_with_structured_output_parses_tool_call_args():
+    final = SimpleNamespace(
+        output=[
+            SimpleNamespace(
+                type="function_call",
+                call_id="call_structured",
+                name="structured_output",
+                arguments='{"action":"Sell"}',
+            )
+        ]
+    )
+    client = SimpleNamespace(responses=SimpleNamespace(create=lambda **kwargs: FakeStream(final)))
+    llm = CodexResponsesChatModel(
+        model="gpt-5.4",
+        api_key="token",
+        base_url="https://chatgpt.com/backend-api/codex",
+        client=client,
+    )
+
+    structured = llm.with_structured_output(Pick)
+    result = structured.invoke("return structured")
+
+    assert result.action == "Sell"
