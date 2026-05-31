@@ -1,0 +1,94 @@
+name: weekly_deep_portfolio_research
+
+schedule:
+  timezone: Asia/Shanghai
+  day: Sunday
+  time: "18:00"
+
+dates:
+  as_of: run_date
+  market_data: latest_trading_day_on_or_before_as_of
+  news_window:
+    mode: trailing_days
+    lookback_days: 7
+    end: as_of
+
+llm:
+  provider: codex-oauth
+  quick_model: gpt-5.4-mini
+  deep_model: gpt-5.4
+  reasoning_effort: high
+  temperature:
+
+research_profiles:
+  core_holdings:
+    analysts: [market, news, fundamentals, social]
+    research_depth: 5
+    news_article_limit: 30
+    global_news_article_limit: 15
+    global_news_lookback_days: 7
+  watchlist:
+    analysts: [market, news, fundamentals, social]
+    research_depth: 3
+    news_article_limit: 20
+    global_news_article_limit: 10
+    global_news_lookback_days: 7
+  benchmarks:
+    analysts: [market, news]
+    research_depth: 3
+    news_article_limit: 20
+    global_news_article_limit: 10
+    global_news_lookback_days: 7
+
+symbols:
+  core_holdings:
+    - NVDA
+  watchlist:
+    - MSFT
+  benchmarks:
+    - SPY
+    - QQQ
+
+execution:
+  symbol_concurrency: 1
+  analyst_concurrency_limit: 1
+  retry_count: 1
+  delay_between_symbols_seconds: 30
+  per_symbol_timeout_minutes: 45
+  checkpoint_enabled: true
+  stop_on_oauth_error: true
+  stop_on_quota_error: true
+  continue_on_symbol_failure: true
+
+source_policy:
+  require_tool_backed_numbers: true
+  flag_missing_sources: true
+  allow_report_with_partial_data: true
+  fail_on_no_market_data: true
+
+output:
+  mode: markdown_vault
+  vault_root: .local/tradingagents-weekly-output
+  weekly_dir: Weekly
+  symbol_dir: Symbols
+  config_dir: Configs
+  write_symbol_reports: true
+  write_weekly_summary: true
+  write_portfolio_matrix: true
+  write_run_meta: true
+
+history:
+  enabled: true
+  mode: index_first
+  compare_with_previous_week: false
+  update_symbol_index: true
+
+metadata:
+  NVDA:
+    theme: AI Semiconductors
+  MSFT:
+    theme: Cloud / AI Platform
+  SPY:
+    theme: US Broad Market Benchmark
+  QQQ:
+    theme: US Tech Growth Benchmark

@@ -78,3 +78,11 @@ class TestProviderKwargsTemperature:
 
     def test_empty_string_omitted(self):
         assert "temperature" not in self._kwargs_for("")
+
+    def test_codex_oauth_forwards_reasoning_effort(self):
+        from tradingagents.graph.trading_graph import TradingAgentsGraph
+
+        graph = TradingAgentsGraph.__new__(TradingAgentsGraph)
+        graph.config = {"llm_provider": "codex-oauth", "openai_reasoning_effort": "high"}
+
+        assert TradingAgentsGraph._get_provider_kwargs(graph)["reasoning_effort"] == "high"
