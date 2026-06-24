@@ -15,6 +15,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 import httpx
 
@@ -50,6 +51,61 @@ def codex_auth_path() -> Path:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _normalize_proxy_url(raw_proxy: str) -> str:
+    """Normalize proxy URLs for httpx compatibility."""
+    proxy = str(raw_proxy or "").strip()
+    if proxy.startswith("socks://"):
+        return "socks5://" + proxy[len("socks://") :]
+    return proxy
+
+
+def _proxy_for_url(url: str) -> str | None:
+    """Resolve a proxy URL for the target request.
+
+    Prefer scheme-specific proxy environment variables over ``ALL_PROXY`` so a
+    generic SOCKS proxy does not override a working HTTP(S) proxy.
+    """
+    scheme = urlparse(url).scheme.lower()
+    candidates: list[str | None] = []
+    if scheme == "https":
+        candidates.extend((os.getenv("HTTPS_PROXY"), os.getenv("https_proxy")))
+    elif scheme == "http":
+        candidates.extend((os.getenv("HTTP_PROXY"), os.getenv("http_proxy")))
+    candidates.extend((os.getenv("ALL_PROXY"), os.getenv("all_proxy")))
+
+    for raw_proxy in candidates:
+        proxy = _normalize_proxy_url(str(raw_proxy or "").strip())
+        if proxy:
+            return proxy
+    return None
+
+
+def _httpx_post(url: str, **kwargs: Any) -> httpx.Response:
+    """POST with proxy handling that is resilient to common local proxy envs."""
+    request_kwargs = dict(kwargs)
+    proxy = _proxy_for_url(url)
+    if proxy:
+        request_kwargs["proxy"] = proxy
+        request_kwargs["trust_env"] = False
+    return httpx.post(url, **request_kwargs)
+
+
+def build_httpx_client_for_url(
+    url: str,
+    *,
+    timeout: float | None = None,
+) -> httpx.Client:
+    """Build an httpx client with TradingAgents proxy normalization."""
+    kwargs: dict[str, Any] = {}
+    proxy = _proxy_for_url(url)
+    if proxy:
+        kwargs["proxy"] = proxy
+        kwargs["trust_env"] = False
+    if timeout is not None:
+        kwargs["timeout"] = timeout
+    return httpx.Client(**kwargs)
 
 
 def save_codex_tokens(tokens: dict[str, str], *, last_refresh: str | None = None) -> None:
@@ -171,7 +227,7 @@ def refresh_codex_oauth(
         )
 
     try:
-        response = httpx.post(
+        response = _httpx_post(
             CODEX_OAUTH_TOKEN_URL,
             headers={
                 "Accept": "application/json",
@@ -241,7 +297,7 @@ def refresh_codex_oauth(
 def request_device_code(*, timeout_seconds: float = 20.0) -> dict[str, Any]:
     """Request a Codex OAuth device code."""
     try:
-        response = httpx.post(
+        response = _httpx_post(
             CODEX_DEVICE_USER_CODE_URL,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
             json={"client_id": CODEX_OAUTH_CLIENT_ID},
@@ -285,7 +341,7 @@ def poll_device_authorization(
     interval = max(3.0, float(interval_seconds))
     while time.monotonic() < deadline:
         try:
-            response = httpx.post(
+            response = _httpx_post(
                 CODEX_DEVICE_TOKEN_URL,
                 headers={"Accept": "application/json", "Content-Type": "application/json"},
                 json={"device_auth_id": device_auth_id, "user_code": user_code},
@@ -327,7 +383,7 @@ def exchange_device_authorization(
 ) -> dict[str, str]:
     """Exchange a completed device authorization for Codex OAuth tokens."""
     try:
-        response = httpx.post(
+        response = _httpx_post(
             CODEX_OAUTH_TOKEN_URL,
             headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"},
             data={

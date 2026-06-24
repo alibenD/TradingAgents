@@ -173,6 +173,13 @@ For local report generation using a ChatGPT/Codex subscription login, use the
 TradingAgents-owned Codex OAuth provider:
 
 ```bash
+./scripts/bringup_tradingagents_codex.sh --mode login
+./scripts/bringup_tradingagents_codex.sh
+```
+
+Equivalent manual steps:
+
+```bash
 python -m tradingagents.llm_clients.codex_login login
 export TRADINGAGENTS_LLM_PROVIDER=codex-oauth
 export TRADINGAGENTS_DEEP_THINK_LLM=gpt-5.4
@@ -185,16 +192,46 @@ This provider creates its own TradingAgents OAuth session under
 It does not depend on Hermes at runtime, does not call the Hermes CLI, and does
 not read `~/.hermes/auth.json`.
 
-For a one-command launcher after login:
+For a reusable bringup flow that bootstraps `.venv`, syncs the current branch
+into the editable install, creates `.env` when missing, checks login state, and
+starts the CLI:
 
 ```bash
-./scripts/start_tradingagents_codex.sh
+./scripts/bringup_tradingagents_codex.sh
+```
+
+Useful modes:
+
+```bash
+./scripts/bringup_tradingagents_codex.sh --mode doctor
+./scripts/bringup_tradingagents_codex.sh --mode status
+./scripts/bringup_tradingagents_codex.sh --mode weekly
+./scripts/bringup_tradingagents_codex.sh --force-reinstall
+```
+
+By default, the bringup script unsets `ALL_PROXY` / `all_proxy` when
+`HTTP_PROXY` or `HTTPS_PROXY` is already defined. This avoids old proxy
+managers exporting `socks://...` values that break Python HTTP clients. To keep
+`ALL_PROXY` for a SOCKS-only environment, set:
+
+```bash
+export TRADINGAGENTS_KEEP_ALL_PROXY=1
 ```
 
 Alternatively, copy `.env.example` to `.env` and fill in your keys:
 ```bash
 cp .env.example .env
 ```
+
+### Codex OAuth troubleshooting
+
+If `codex_login` fails before reaching the device-code page with an error like
+`Unknown scheme for proxy URL ... socks://...`, the root cause is usually a
+local `ALL_PROXY=socks://...` environment variable. `httpx` rejects the bare
+`socks://` scheme even when `HTTPS_PROXY` is already set correctly. This branch
+now prefers `HTTPS_PROXY` / `HTTP_PROXY` over `ALL_PROXY` for Codex auth
+requests and normalizes `socks://` to `socks5://` when it does need the SOCKS
+proxy value.
 
 ### CLI Usage
 

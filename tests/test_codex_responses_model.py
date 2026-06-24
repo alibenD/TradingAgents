@@ -222,3 +222,34 @@ def test_with_structured_output_parses_tool_call_args():
     result = structured.invoke("return structured")
 
     assert result.action == "Sell"
+
+
+def test_default_client_uses_proxy_normalized_http_client(monkeypatch):
+    import tradingagents.llm_clients.codex_responses_model as mod
+
+    captured = {}
+
+    class FakeOpenAI:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(mod, "build_httpx_client_for_url", lambda url, timeout=None: ("client", url, timeout))
+    monkeypatch.setenv("ALL_PROXY", "socks://127.0.0.1:7897/")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:7897/")
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", FakeOpenAI)
+
+    llm = CodexResponsesChatModel(
+        model="gpt-5.4",
+        api_key="token",
+        base_url="https://chatgpt.com/backend-api/codex",
+        timeout=12.0,
+    )
+
+    client = llm._default_client()
+
+    assert isinstance(client, FakeOpenAI)
+    assert captured["http_client"] == ("client", "https://chatgpt.com/backend-api/codex", 12.0)
+    assert captured["timeout"] == 12.0

@@ -15,7 +15,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import ConfigDict, Field, PrivateAttr
 
-from .codex_auth import DEFAULT_CODEX_BASE_URL
+from .codex_auth import DEFAULT_CODEX_BASE_URL, build_httpx_client_for_url
 
 
 def _message_text(content: Any) -> str:
@@ -295,6 +295,7 @@ class CodexResponsesChatModel(BaseChatModel):
             kwargs["timeout"] = self.timeout
         if self.max_retries is not None:
             kwargs["max_retries"] = self.max_retries
+        kwargs["http_client"] = build_httpx_client_for_url(self.base_url, timeout=self.timeout)
         return OpenAI(**kwargs)
 
     def _get_client(self) -> Any:

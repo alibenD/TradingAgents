@@ -118,6 +118,70 @@ def test_device_code_request_wraps_network_error(monkeypatch):
     assert exc.value.relogin_required is True
 
 
+def test_request_device_code_prefers_https_proxy_over_all_proxy(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"user_code": "ABCD-EFGH", "device_auth_id": "device-1"}
+
+    def fake_post(url, **kwargs):
+        captured["url"] = url
+        captured["kwargs"] = kwargs
+        return FakeResponse()
+
+    monkeypatch.setenv("ALL_PROXY", "socks://127.0.0.1:7897/")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:7897/")
+    monkeypatch.setattr(codex_auth.httpx, "post", fake_post)
+
+    payload = codex_auth.request_device_code()
+
+    assert payload["user_code"] == "ABCD-EFGH"
+    assert captured["url"] == codex_auth.CODEX_DEVICE_USER_CODE_URL
+    assert captured["kwargs"]["proxy"] == "http://127.0.0.1:7897/"
+    assert captured["kwargs"]["trust_env"] is False
+
+
+def test_request_device_code_normalizes_socks_proxy_scheme(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"user_code": "ABCD-EFGH", "device_auth_id": "device-1"}
+
+    def fake_post(url, **kwargs):
+        captured["url"] = url
+        captured["kwargs"] = kwargs
+        return FakeResponse()
+
+    monkeypatch.delenv("HTTPS_PROXY", raising=False)
+    monkeypatch.delenv("https_proxy", raising=False)
+    monkeypatch.setenv("ALL_PROXY", "socks://127.0.0.1:7897/")
+    monkeypatch.setattr(codex_auth.httpx, "post", fake_post)
+
+    payload = codex_auth.request_device_code()
+
+    assert payload["user_code"] == "ABCD-EFGH"
+    assert captured["kwargs"]["proxy"] == "socks5://127.0.0.1:7897/"
+    assert captured["kwargs"]["trust_env"] is False
+
+
+def test_build_httpx_client_for_url_prefers_https_proxy(monkeypatch):
+    monkeypatch.setenv("ALL_PROXY", "socks://127.0.0.1:7897/")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:7897/")
+
+    client = codex_auth.build_httpx_client_for_url("https://auth.openai.com/oauth/token")
+
+    transport = getattr(client, "_transport", None)
+    assert transport is not None
+    assert client._trust_env is False
+    client.close()
+
+
 def test_device_code_login_saves_tokens(tmp_path, monkeypatch):
     monkeypatch.setenv("TRADINGAGENTS_HOME", str(tmp_path))
     calls = []
